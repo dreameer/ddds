@@ -1,0 +1,485 @@
+#include "resource.h"
+
+#include <windows.h>
+#include <strsafe.h>
+#include <windowsx.h>
+#include <commctrl.h>
+
+#define UNICODE 0
+
+#define ID_DEFAULT 100
+#define IDM_SHEBEISHEZHI 1
+#define IDM_WENJIANCUNPAN 2
+#define IDM_WUMATONGJI 4
+#define IDM_TUICHUXITONG 5
+
+#define IDM_YUANMABIAOGE 6
+#define IDM_YUANMATIAOTU 7
+#define IDM_YUANMAQUXIAN 8
+
+#define IDM_SHUIPINPAILIE 9
+#define IDM_CHONGDIEPAILIE 10
+#define IDM_YUANMAQUXIAN_LIULAN 11
+#define IDM_YUANMABIAOGE_LIULAN 12
+#define IDM_YUANMATIAOTU_LIULAN 13
+#define IDM_GUANGYUYERUAN 14
+
+#define IDB_SHEBEISHEZHI 15
+
+#define IDT_PCMJIETIAO 0
+#define IDT_PCMMONI 1
+#define IDT_PCMSHIMA 2
+#define IDT_PCMZHONGPING 3
+
+#pragma comment( lib, "comctl32.lib" )
+
+static HFONT s_hFont = NULL;
+HWND hTab;
+HINSTANCE hinstance;
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+
+void ChangeFont(HWND hwnd);
+void CreateTooltip(HWND hwnd,char* tooltip );
+void AddMenus(HWND hwnd);
+void Add_first_statics(HWND hwnd);
+void Add_second_statics(HWND hwnd);
+void Add_buttons(HWND hwnd);
+void Create_SHEBEICHANSHUSHEZHI_WINDOW(HWND hwnd);
+void Createbutton_icon_tooltip(HWND parent_hwnd,HMENU hmenu_id,char *name,int resource_id,
+							   int x,int y,int width,int height);
+void create_statics_combox(HWND parent_hwnd,HMENU hmenu_id,char *staticname,char** combox_item,int combox_num,
+						  int x,int y,int width,int height);
+void create_statics_edit(HWND parent_hwnd,HMENU hmenu_id,char *staticname,char *edit_default,
+						 int x,int y,int width,int height);
+void dlgtab1(HWND hwnd);
+LRESULT CALLBACK DialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
+    PWSTR pCmdLine, int nCmdShow) {
+    
+    MSG  msg;    
+    HWND hwnd;
+    WNDCLASS wc = {0};
+
+	hinstance = hInstance;
+
+    //wc.style         = CS_HREDRAW | CS_VREDRAW;
+    //wc.cbClsExtra    = 0;
+    //wc.cbWndExtra    = 0;
+    wc.lpszClassName = "MainWindow";
+    wc.hInstance     = hInstance;
+    wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
+    wc.lpszMenuName  = NULL;
+    wc.lpfnWndProc   = WndProc;
+    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
+    wc.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
+  
+    RegisterClass(&wc);
+
+	//
+	MessageBox(NULL,"基带卡初始化失败：（0x10000） 初始化基带卡时发生以下错误： \Failed Open Windriver device","YeRuan-tech",MB_OK);
+
+    hwnd = CreateWindow(wc.lpszClassName, "帧格式：24x4x8、码率：10000000bps、\
+						帧周期：0.7680ms，子帧同步码：EB90——烨软科技有限公司",
+						WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                20, 20, 1200, 900, NULL, NULL, hInstance, NULL);  
+
+	//ShowWindow(hwnd, SW_MAXIMIZE);
+	//ShowWindow(hwnd,nCmdShow);
+    //UpdateWindow(hwnd);
+
+    while (GetMessage(&msg, NULL, 0, 0)) {
+  
+        DispatchMessage(&msg);
+    }
+
+    return (int) msg.wParam;
+}
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, 
+    WPARAM wParam, LPARAM lParam) {
+
+		static HWND hwndEdit;
+    switch(msg) {
+	
+	case WM_CREATE:
+		hwndEdit = CreateWindow("Edit", "default", 
+                WS_CHILD | WS_VISIBLE | WS_BORDER,
+                50, 50, 150, 20, hwnd, (HMENU) 1,
+                NULL, NULL);
+		//ChangeFont(hwnd);
+		//AddMenus(hwnd);
+		//Add_first_statics(hwnd);
+		//Add_second_statics(hwnd);
+		//Add_buttons(hwnd);
+		
+		break;
+	case WM_COMMAND:
+		switch(LOWORD(wParam)) {
+		case IDB_SHEBEISHEZHI:
+			MessageBox(NULL,"你点击了设备设置按钮","YeRuan-tech",MB_OK);
+			Create_SHEBEICHANSHUSHEZHI_WINDOW(hwnd);
+			break;
+		}
+		break;
+	case WM_CLOSE:
+	  if(MessageBox(NULL,"是否退出程序？","YeRuan-tech",MB_OKCANCEL)==IDOK){
+		   DestroyWindow(hwnd);
+	  }
+	  else{
+	  }
+	  break;
+	case WM_DESTROY:
+		DeleteObject(s_hFont);
+		PostQuitMessage(0);
+	  break;
+	default:
+	 return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+	return 0;
+    
+}
+void ChangeFont(HWND hWnd){
+	const char* fontName = "Croobie";
+    const long nFontSize = 10;
+
+    HDC hdc = GetDC(hWnd);
+
+    LOGFONT logFont = {0};
+    logFont.lfHeight = -MulDiv(nFontSize, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+    logFont.lfWeight = FW_LIGHT;
+	memcpy_s(logFont.lfFaceName, 32,fontName,32);
+
+    s_hFont = CreateFontIndirect(&logFont);
+
+    ReleaseDC(hWnd, hdc);
+}
+void AddMenus(HWND hwnd) {
+
+    HMENU hMenubar;
+    HMENU hMenu;
+
+    hMenubar = CreateMenu();
+    hMenu = CreateMenu();
+
+    AppendMenu(hMenu, MF_STRING, IDM_SHEBEISHEZHI, "设备设置");
+    AppendMenu(hMenu, MF_STRING, IDM_WENJIANCUNPAN, "文件存盘");
+    AppendMenu(hMenu, MF_STRING, IDM_WUMATONGJI, "误码统计");
+	AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hMenu, MF_STRING, IDM_TUICHUXITONG, "退出系统");
+
+    AppendMenu(hMenubar, MF_POPUP, (UINT_PTR) hMenu, "遥测系统（S）");
+    SetMenu(hwnd, hMenubar);
+
+	DestroyMenu(hMenu);
+    hMenu = CreateMenu();
+
+    AppendMenu(hMenu, MF_STRING, IDM_YUANMABIAOGE, "源码表格");
+    AppendMenu(hMenu, MF_STRING, IDM_YUANMATIAOTU, "源码条图");
+    AppendMenu(hMenu, MF_STRING, IDM_YUANMAQUXIAN, "源码曲线");
+
+	AppendMenu(hMenubar, MF_POPUP, (UINT_PTR) hMenu, "显示功能（V）");
+    SetMenu(hwnd, hMenubar);
+
+	DestroyMenu(hMenu);
+    hMenu = CreateMenu();
+
+    AppendMenu(hMenu, MF_STRING, IDM_SHUIPINPAILIE, "水平排列（T）");
+    AppendMenu(hMenu, MF_STRING, IDM_CHONGDIEPAILIE, "重叠排列（C）");
+	AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hMenu, MF_STRING, IDM_YUANMAQUXIAN_LIULAN, "1、源码曲线浏览窗口");
+	CheckMenuItem(hMenu, IDM_YUANMAQUXIAN_LIULAN, MF_CHECKED);
+	AppendMenu(hMenu, MF_STRING, IDM_YUANMABIAOGE_LIULAN, "1、源码表格浏览窗口");
+	AppendMenu(hMenu, MF_STRING, IDM_YUANMATIAOTU_LIULAN, "1、源码条图浏览窗口");
+	AppendMenu(hMenubar, MF_POPUP, (UINT_PTR) hMenu, "窗口属性");
+    SetMenu(hwnd, hMenubar);
+
+	DestroyMenu(hMenu);
+    hMenu = CreateMenu();
+
+    AppendMenu(hMenu, MF_STRING, IDM_GUANGYUYERUAN, "关于烨软科技有限公司");
+
+	AppendMenu(hMenubar, MF_POPUP, (UINT_PTR) hMenu, "帮助");
+    SetMenu(hwnd, hMenubar);
+}
+void Add_first_statics(HWND hwnd){
+	RECT rect;
+	GetWindowRect(hwnd,&rect);
+	int width = 80;
+	int height = 20;
+	HWND statu_window = CreateWindow("Static",NULL,WS_CHILD | WS_VISIBLE ,0,0*height,
+		(rect.right-rect.left-10),height,hwnd,(HMENU)16,NULL,NULL);
+	CreateWindow("Static","位同步", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,0*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","子帧同步", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,1*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","副帧同步", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,2*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","PCM来源：自检", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,3*width, 0, 2*width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","起飞时刻：", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,5*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","时统模式：内时统（系统时间）", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,6*width, 0, 3*width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","存盘（后）：", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,9*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","存盘（前）：", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,10*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","可用空间：", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,11*width, 0,width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+}
+void Add_second_statics(HWND hwnd){
+	RECT rect;
+	GetWindowRect(hwnd,&rect);
+	int width = 80;
+	int height = 20;
+	HWND statu_window = CreateWindow("Static",NULL,WS_CHILD | WS_VISIBLE ,0,1*height+10,
+		(rect.right-rect.left-10),height,hwnd,(HMENU)16,NULL,NULL);
+	CreateWindow("Static","差模环", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,0*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","共模环", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,1*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","中频频率：", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,2*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","左路信噪比：", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,3*width, 0, 2*width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","右路信噪比：", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,5*width, 0, 2*width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","比对位数：", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,7*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+	CreateWindow("Static","误码率：", 
+		WS_CHILD | WS_VISIBLE | SS_LEFT | WS_BORDER,8*width, 0, width, height, statu_window, (HMENU) ID_DEFAULT, NULL, NULL);
+}
+void Add_buttons(HWND hwnd){
+	char *name[16] = 
+	{"设备设置","解密前数据存盘","解密后数据存盘","模飞","开始误码统计","误码统计波道设置",
+		"允许起飞","手动起飞","显示解密数据","源码表格显示","源码条图显示","源码曲线显示",
+		"平铺窗口","退出","关于","源码条图选路"};
+	int hmenu_id[16]; 
+	hmenu_id[0] = IDB_SHEBEISHEZHI;
+	for(int i=1;i<16;i++){
+		hmenu_id[i] = ID_DEFAULT;
+	}
+	int icon_resource_id[16] = 
+	{IDI_ICON1,IDI_ICON2,IDI_ICON3,IDI_ICON4,IDI_ICON5,IDI_ICON6,IDI_ICON7,IDI_ICON8,
+	IDI_ICON9,IDI_ICON10,IDI_ICON12,IDI_ICON12,IDI_ICON13,IDI_ICON14,IDI_ICON15,IDI_ICON16};
+	for(int i=0;i<16;i++){
+		Createbutton_icon_tooltip(hwnd,(HMENU)hmenu_id[i],name[i],icon_resource_id[i],i*32,60,32,32);
+	}
+}
+void Create_SHEBEICHANSHUSHEZHI_WINDOW(HWND hwnd){
+	WNDCLASSEX wc = {0};
+    wc.cbSize           = sizeof(WNDCLASSEXW);
+    wc.lpfnWndProc      = (WNDPROC) DialogProc;
+    //wc.hInstance        = ghInstance;
+    wc.hbrBackground    = GetSysColorBrush(COLOR_3DFACE);
+    wc.lpszClassName    = "DialogClass";
+    RegisterClassEx(&wc);
+
+	CreateWindowEx(WS_EX_DLGMODALFRAME,"DialogClass", "设备参数设置", 
+        WS_VISIBLE | WS_SYSMENU | WS_CAPTION , 200, 200, 800, 600, 
+        NULL, NULL, 
+		//ghInstance
+		0,  NULL);
+
+}
+LRESULT CALLBACK DialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	
+	static HWND Dlg_button_OK,Dlg_button_cancel,Dlg_button_apply;
+	TCITEM tabItemData;
+	int idTab;
+
+    char tabItem1[] = "PCM解调器";
+	char tabItem2[] = "PCM模拟器";
+    char tabItem3[] = "时码器";
+	char tabItem4[] = "中频处理器";
+
+
+	wchar_t buff[10] ;
+	
+	tabItemData.mask = TCIF_TEXT;
+	
+
+  switch(msg) {
+  
+    case WM_CREATE:
+		hTab = CreateWindow(WC_TABCONTROL, NULL, WS_CHILD | WS_VISIBLE,
+			0, 0, 800, 520, hwnd,(HMENU) ID_DEFAULT, NULL, NULL);
+
+		tabItemData.pszText = tabItem1;
+	    SendMessageW(hTab, TCM_INSERTITEM, IDT_PCMJIETIAO, 
+                            (LPARAM) (LPTCITEM) &tabItemData);
+
+		tabItemData.pszText = tabItem2;
+		SendMessageW(hTab, TCM_INSERTITEM, IDT_PCMMONI, 
+                            (LPARAM) (LPTCITEM) &tabItemData);
+
+		tabItemData.pszText = tabItem3;
+	    SendMessageW(hTab, TCM_INSERTITEM, IDT_PCMSHIMA, 
+                            (LPARAM) (LPTCITEM) &tabItemData);
+
+		tabItemData.pszText = tabItem4;
+		SendMessageW(hTab, TCM_INSERTITEM, IDT_PCMZHONGPING, 
+                            (LPARAM) (LPTCITEM) &tabItemData);
+
+		dlgtab1(hwnd);
+
+
+
+
+        Dlg_button_OK = CreateWindow("button", "确定", WS_VISIBLE | WS_CHILD ,
+          400, 530, 80, 20, hwnd, (HMENU) 1, NULL, NULL);
+        Dlg_button_cancel = CreateWindow("button", "取消", WS_VISIBLE | WS_CHILD ,
+          500, 530, 80, 20, hwnd, (HMENU) 1, NULL, NULL);
+        Dlg_button_apply = CreateWindow("button", "应用（A）", WS_VISIBLE | WS_CHILD ,
+          600, 530, 80, 20, hwnd, (HMENU) 1, NULL, NULL);
+
+
+    break;
+
+    case WM_COMMAND:
+		switch(LOWORD(wParam)){
+
+		}
+
+		break;
+	case WM_NOTIFY:
+		switch(((LPNMHDR)lParam)->code){
+		case TCN_FIRST:
+			break;
+		case TCN_FOCUSCHANGE:
+			break;
+		case TCN_GETOBJECT:
+			break;
+		case TCN_SELCHANGE:
+			idTab = TabCtrl_GetCurSel(hTab);
+			switch(idTab){
+			case IDT_PCMJIETIAO:
+				//ShowWindow(button,SW_SHOW);
+				//MessageBoxW(NULL,L"0",NULL,MB_OK);
+				break;
+			case IDT_PCMMONI:
+				//ShowWindow(button,SW_HIDE);
+				//MessageBoxW(NULL,L"1",NULL,MB_OK);
+				break;
+			case IDT_PCMSHIMA:
+				break;
+			case IDT_PCMZHONGPING:
+				break;
+			default:
+				break;
+			}
+			
+		case TCN_SELCHANGING:
+			break;
+		default:
+			break;
+		}
+		break;
+    case WM_CLOSE:
+        DestroyWindow(hwnd);
+        break;
+	default:
+		return (DefWindowProc(hwnd, msg, wParam, lParam));
+  }
+  return 0;
+  
+}
+void dlgtab1(HWND hwnd){
+	char *combo1_item[4] = {"自检","外部PCM","接收机","关闭"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"pcm来源"    ,combo1_item,4,10,1*40,80,40);
+	char *combo2_item[7] = {"NRZ-L","NRZ-M","NRZ-S","BI$-L","BI$-M","BI$-S","RNRZ-L"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"码型"       ,combo2_item,7,10,2*40,80,40);
+	char *combo3_item[4] = {"0.1%","0.5%","1.0%","3.0%"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"环路带宽"    ,combo3_item,4,10,3*40,80,40);
+	char *combo4_item[2] = {"允许","禁止"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"帧同步模糊"  ,combo4_item,2,10,4*40,80,40);
+	char *combo5_item[4] = {"无副帧","反码副帧","ID副帧","循环副帧"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"副帧类型"    ,combo5_item,4,10,5*40,80,40);
+	char *combo6_item[4] = {"无","TPC码","turbo码","ldpc码"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"信源译码"    ,combo6_item,4,10,6*40,80,40);
+	char *combo7_item[2] = {"减计数","减计数"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"ID码计数方式",combo7_item,2,10,7*40,80,40);
+	char *combo8_item[3] = {"32，26","64，57","128，120"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"矩阵类型"    ,combo8_item,3,10,8*40,80,40);
+	char *combo9_item[2] = {"关","开"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"解密开关"    ,combo9_item,2,10,9*40,80,40);
+	char *combo10_item[9] = {"1","2","4","8","16","32","64","128","256"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"加密周期"    ,combo10_item,9,10,10*40,80,40);
+	char *combo11_item[2] = {"128","184"};
+	create_statics_combox(hwnd,(HMENU)ID_DEFAULT,"密钥长度"    ,combo11_item,2,10,11*40,80,40);
+	char *statics_name[5] = {"码率（bps）","字长（bit）","校核帧数","惯性同步帧数",""};
+	char *edit_default[5] = {"1000000","8","1","1",""};
+	for(int i=0;i<1;i++){
+		create_statics_edit(hwnd,(HMENU)ID_DEFAULT,statics_name[i],edit_default[i],180,(i+1)*40,80,20);
+	}
+
+}
+void CreateTooltip(HWND hwnd,char* tooltip ){
+
+    INITCOMMONCONTROLSEX iccex; 
+    HWND hwndTT;                
+
+    TOOLINFO ti;
+    //char tooltip[30] = "这是个按钮";
+    RECT rect;                 
+  
+    iccex.dwICC = ICC_TAB_CLASSES;
+    iccex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+    InitCommonControlsEx(&iccex);
+
+    hwndTT = CreateWindowEx(WS_EX_TOPMOST, TOOLTIPS_CLASS, NULL,
+        WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,		
+        0, 0, 0, 0, hwnd, NULL, NULL, NULL );
+
+    SetWindowPos(hwndTT, HWND_TOPMOST, 0, 0, 0, 0,
+        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+   
+    GetClientRect(hwnd, &rect);
+
+    ti.cbSize = sizeof(TOOLINFO);
+    ti.uFlags = TTF_SUBCLASS;
+    ti.hwnd = hwnd;
+    ti.hinst = NULL;
+    ti.uId = 0;
+    ti.lpszText = tooltip;
+    ti.rect.left = rect.left;    
+    ti.rect.top = rect.top;
+    ti.rect.right = rect.right;
+    ti.rect.bottom = rect.bottom;
+
+    SendMessage(hwndTT, TTM_ADDTOOL, 0, (LPARAM) (LPTOOLINFO) &ti);	
+} 
+void Createbutton_icon_tooltip(
+	HWND parent_hwnd,HMENU hmenu_id,char *name,int resource_id,int x,int y,int width,int height)
+{
+	HWND button = CreateWindow("BUTTON", name, WS_CHILD | WS_VISIBLE | BS_ICON, 
+                 x, y, width, height, parent_hwnd, hmenu_id, NULL, 0);
+	HICON icon = LoadIcon(hinstance,MAKEINTRESOURCE(resource_id));
+	SendMessage(button,BM_SETIMAGE,(WPARAM)IMAGE_ICON,(LPARAM)icon);
+	CreateTooltip(button,name);
+}
+void create_statics_combox(HWND parent_hwnd,HMENU hmenu_id,char *staticname,char** combox_item,int combox_num,
+						  int x,int y,int width,int height){
+	
+	HWND statics = CreateWindow("Static",staticname,WS_CHILD | WS_VISIBLE | SS_LEFT,
+		x,y,width,height,parent_hwnd,hmenu_id,NULL,NULL);
+	SendMessage(statics,WM_SETFONT, (WPARAM)s_hFont, (LPARAM)MAKELONG(TRUE, 0));
+	HWND combox = CreateWindow("Combobox", staticname, WS_CHILD | WS_VISIBLE | CBS_DROPDOWN,
+		x+width,y,width,height*combox_num, parent_hwnd, hmenu_id, NULL, NULL);
+	SendMessage(combox,WM_SETFONT, (WPARAM)s_hFont, (LPARAM)MAKELONG(TRUE, 0));
+	for (int i = 0; i < combox_num; i++ ) {
+		SendMessage(combox, CB_ADDSTRING, 0, (LPARAM) combox_item[i]);
+	}
+}
+void create_statics_edit(HWND parent_hwnd,HMENU hmenu_id,char *staticname,char *edit_default,
+						 int x,int y,int width,int height){
+	HWND statics = CreateWindow("Static",staticname,WS_CHILD | WS_VISIBLE | SS_LEFT,
+		                         x,y,width,height,parent_hwnd,hmenu_id,NULL,NULL);
+	SendMessage(statics,WM_SETFONT, (WPARAM)s_hFont, (LPARAM)MAKELONG(TRUE, 0));
+    static HWND hwndEdit = CreateWindow("EDIT", edit_default,
+		WS_CHILD | WS_VISIBLE ,
+		x+width, y, width, height, parent_hwnd, (HMENU)22,(HINSTANCE) GetWindowLong(parent_hwnd, GWL_HINSTANCE), NULL);
+	EnableWindow(hwndEdit,true);
+	//SendMessage(hwndEdit,WM_SETFONT, (WPARAM)s_hFont, (LPARAM)MAKELONG(TRUE, 0));
+}
